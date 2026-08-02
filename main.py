@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from sqlmodel import Session, select
+from sqlalchemy import or_
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -236,27 +237,42 @@ def create_patient(
 @app.get("/patients")
 @limiter.limit("30/minute")
 def get_patients(
-     request: Request,
+    request: Request,
+    search: str | None = None,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
+    # Admin can access all patients
     if current_user.role == "admin":
-        patients = session.exec(
-            select(Patient)
-        ).all()
+        query = select(Patient)
 
+    # Doctor can access only their assigned patients
     elif current_user.role == "doctor":
-        patients = session.exec(
-            select(Patient).where(
-                Patient.doctor_id == current_user.id
-            )
-        ).all()
+        query = select(Patient).where(
+            Patient.doctor_id == current_user.id
+        )
 
+    # Other roles are not allowed
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to access patient records"
         )
+
+    # Apply search only after authorization filtering
+    if search:
+        search_term = f"%{search}%"
+
+        query = query.where(
+            or_(
+                Patient.first_name.ilike(search_term),
+                Patient.last_name.ilike(search_term),
+                Patient.phone.ilike(search_term),
+                Patient.email.ilike(search_term)
+            )
+        )
+
+    patients = session.exec(query).all()
 
     return patients
 
