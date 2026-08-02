@@ -21,7 +21,25 @@ from auth import (
     get_current_active_user,
      get_current_admin
 )
+from models.audit import AuditLog
+def create_audit_log(
+    session: Session,
+    user_id: int,
+    action: str,
+    resource: str,
+    resource_id: int | None = None,
+    details: str | None = None
+):
+    audit_log = AuditLog(
+        user_id=user_id,
+        action=action,
+        resource=resource,
+        resource_id=resource_id,
+        details=details
+    )
 
+    session.add(audit_log)
+    session.commit()
 app = FastAPI(
     title="ClinicGuard Patient Management API",
     version="1.0.0",
@@ -203,7 +221,17 @@ def create_patient(
     session.commit()
     session.refresh(patient)
 
+    create_audit_log(
+        session=session,
+        user_id=current_user.id,
+        action="CREATE",
+        resource="patient",
+        resource_id=patient.id,
+        details="Patient record created"
+    )
+
     return patient
+  
 
 @app.get("/patients")
 @limiter.limit("30/minute")
@@ -313,6 +341,14 @@ def update_patient(
     session.add(patient)
     session.commit()
     session.refresh(patient)
+    create_audit_log(
+    session=session,
+    user_id=current_user.id,
+    action="UPDATE",
+    resource="patient",
+    resource_id=patient.id,
+    details="Patient record updated"
+)
 
     return patient
 
@@ -352,6 +388,15 @@ def delete_patient(
 
     session.delete(patient)
     session.commit()
+    create_audit_log(
+    session=session,
+    user_id=current_user.id,
+    action="DELETE",
+    resource="patient",
+    resource_id=patient_id,
+    details="Patient record deleted"
+)
+
 
     return {
         "message": "Patient deleted successfully",
