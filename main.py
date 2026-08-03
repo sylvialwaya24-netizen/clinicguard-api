@@ -79,7 +79,6 @@ def health_check():
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED
 )
-@app.post("/register")
 @limiter.limit("5/minute")
 def register(
     request: Request,
