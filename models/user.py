@@ -1,6 +1,13 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Optional
+from enum import Enum
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    DOCTOR = "doctor"
+    PATIENT = "patient"
 
 
 class User(SQLModel, table=True):
@@ -25,7 +32,9 @@ class User(SQLModel, table=True):
         max_length=100
     )
 
-    role: str = Field(default="doctor")
+    role: UserRole = Field(
+        default=UserRole.DOCTOR
+    )
 
     is_active: bool = Field(default=True)
 
@@ -57,7 +66,9 @@ class UserCreate(SQLModel):
         max_length=100
     )
 
-    role: str = Field(default="doctor")
+    role: UserRole = Field(
+        default=UserRole.DOCTOR
+    )
 
 
 class UserLogin(SQLModel):
@@ -70,6 +81,6 @@ class UserResponse(SQLModel):
     username: str
     email: str
     full_name: str
-    role: str
+    role: UserRole
     is_active: bool
     created_at: datetime
