@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Optional
 from enum import Enum
+from sqlalchemy import Column, Enum as SAEnum
 
 
 class UserRole(str, Enum):
@@ -11,7 +12,10 @@ class UserRole(str, Enum):
 
 
 class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(
+        default=None,
+        primary_key=True
+    )
 
     username: str = Field(
         unique=True,
@@ -33,10 +37,22 @@ class User(SQLModel, table=True):
     )
 
     role: UserRole = Field(
-        default=UserRole.DOCTOR
+        default=UserRole.DOCTOR,
+        sa_column=Column(
+            SAEnum(
+                UserRole,
+                values_callable=lambda enum_cls: [
+                    role.value for role in enum_cls
+                ],
+                name="userrole"
+            ),
+            nullable=False
+        )
     )
 
-    is_active: bool = Field(default=True)
+    is_active: bool = Field(
+        default=True
+    )
 
     created_at: datetime = Field(
         default_factory=datetime.utcnow
@@ -84,3 +100,4 @@ class UserResponse(SQLModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+
